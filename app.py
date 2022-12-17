@@ -8,11 +8,17 @@ import itertools
 from collections import Counter
 from collections import deque
 
+import os
 import time
 import pyautogui
 import cv2 as cv
 import numpy as np
 import mediapipe as mp
+from tkinter import * 
+from PIL import Image, ImageTk
+
+fileName = os.environ['ALLUSERSPROFILE'] + "\WebcamCap.txt"
+cancel = False
 
 from utils import CvFpsCalc
 from model import KeyPointClassifier
@@ -58,20 +64,13 @@ def main():
     
     args = get_args()
 
-    cap_device = args.device
-    cap_width = args.width
-    cap_height = args.height  
 
     use_static_image_mode = args.use_static_image_mode
     min_detection_confidence = args.min_detection_confidence
     min_tracking_confidence = args.min_tracking_confidence
 
-    use_brect = True
 
-    
-    cap = cv.VideoCapture(cap_device)
-    cap.set(cv.CAP_PROP_FRAME_WIDTH, cap_width)
-    cap.set(cv.CAP_PROP_FRAME_HEIGHT, cap_height)
+    use_brect = True
 
   
     mp_hands = mp.solutions.hands
@@ -101,6 +100,13 @@ def main():
             row[0] for row in point_history_classifier_labels
         ]
 
+    cap_device = args.device
+    cap_width = args.width
+    cap_height = args.height  
+
+    cap = cv.VideoCapture(cap_device)
+    cap.set(cv.CAP_PROP_FRAME_WIDTH, cap_width)
+    cap.set(cv.CAP_PROP_FRAME_HEIGHT, cap_height)
     
     cvFpsCalc = CvFpsCalc(buffer_len=10)
     history_length = 16
@@ -113,18 +119,26 @@ def main():
     prevTapped = -1
     startInit = False
 
-    while True:
-        fps = cvFpsCalc.get()
-    #press escape to exit
-        key = cv.waitKey(10)
-        if key == 27:  # ESC
-            break
-        number, mode = select_mode(key, mode)
+    app = Tk()
+    app.bind('<Escape>', lambda e : app.quit())
 
-       
-        ret, image = cap.read()
-        if not ret: 
-            break
+
+    label_widget = Label(app)
+    label_widget.pack()
+
+    
+    prevTapped = -1
+    startInit = False
+    def open_camera():
+  
+    # Capture the video frame by frame
+        _, frame = cap.read()
+        key = cv.waitKey(10)
+        fps = cvFpsCalc.get()
+        mode = 0
+      
+        image = frame
+        number, mode = select_mode(key, mode)
         image = cv.flip(image, 1)  # Mirror display
         debug_image = copy.deepcopy(image)
 
@@ -133,6 +147,7 @@ def main():
 
         image.flags.writeable = False
         results = hands.process(image)
+        print(results.multi_hand_landmarks)
         image.flags.writeable = True
        
         endInit = time.time()
@@ -157,6 +172,7 @@ def main():
                 # Hand sign classification
                 hand_sign_id = keypoint_classifier(pre_processed_landmark_list)
                 
+             
                 if not (prevTapped == hand_sign_id) :
                  if  (startInit == False) :
                         startInit = time.time()
@@ -212,10 +228,135 @@ def main():
         # Screen reflection #############################################################
         cv.imshow('Hand Gesture Recognition', debug_image)
 
-    cap.release()
-    cv.destroyAllWindows()
+    # Convert image from one color space to other
+        opencv_image = cv.cvtColor(frame, cv.COLOR_BGR2RGBA)
+  
+    # Capture the latest frame and transform to image
+        captured_image = Image.fromarray(opencv_image)
+  
+    # Convert captured image to photoimage
+        photo_image = ImageTk.PhotoImage(image=captured_image)
 
-#def press_key(hand_sign_id, prevTapped, startInit, endInit):  
+
+  
+    # Displaying photoimage in the label
+        label_widget.photo_image = photo_image
+  
+    # Configure image in the label
+        label_widget.configure(image=photo_image)
+  
+    # Repeat the same process after every 10 seconds
+        label_widget.after(10, open_camera)
+    
+    button1 = Button(app, text="Camm", command=open_camera)
+    button1.pack()
+
+
+    app.mainloop()
+    #GUI HEre
+
+    # while True:
+    #     fps = cvFpsCalc.get()
+    # #press escape to exit
+    #     key = cv.waitKey(10)
+    #     if key == 27:  # ESC
+    #         break
+    #     number, mode = select_mode(key, mode)
+
+       
+    #     ret, image = cap.read()
+    #     if not ret: 
+    #         break
+    #     image = cv.flip(image, 1)  # Mirror display
+    #     debug_image = copy.deepcopy(image)
+
+      
+    #     image = cv.cvtColor(image, cv.COLOR_BGR2RGB)
+
+        # image.flags.writeable = False
+        # results = hands.process(image)
+        # image.flags.writeable = True
+       
+        # endInit = time.time()
+      
+        # if results.multi_hand_landmarks is not None:
+        #     for hand_landmarks, handedness in zip(results.multi_hand_landmarks,
+        #                                           results.multi_handedness):
+        #         # Bounding box calculation
+        #         brect = calc_bounding_rect(debug_image, hand_landmarks)
+        #         # Landmark calculation
+        #         landmark_list = calc_landmark_list(debug_image, hand_landmarks)
+
+        #         # Conversion to relative coordinates / normalized coordinates
+        #         pre_processed_landmark_list = pre_process_landmark(
+        #             landmark_list)
+        #         pre_processed_point_history_list = pre_process_point_history(
+        #             debug_image, point_history)
+        #         # Write to the dataset file
+        #         logging_csv(number, mode, pre_processed_landmark_list,
+        #                     pre_processed_point_history_list)
+
+        #         # Hand sign classification
+        #         hand_sign_id = keypoint_classifier(pre_processed_landmark_list)
+                
+        #         if not (prevTapped == hand_sign_id) :
+        #          if  (startInit == False) :
+        #                 startInit = time.time()
+        #                 startInit = True
+        #          elif (endInit - startInit) > 0.3 :
+        #                 if (hand_sign_id == 0):
+        #                       pyautogui.press("space")
+        #                 elif (hand_sign_id == 4):
+        #                       pyautogui.press("up")
+        #                 elif (hand_sign_id == 5):
+        #                       pyautogui.press("down")
+        #                 elif (hand_sign_id == 6):
+        #                       pyautogui.press("right")
+        #                 elif (hand_sign_id == 7):
+        #                       pyautogui.press("left")
+
+        #                 prevTapped = hand_sign_id
+        #                 startInit = False
+
+        #         if hand_sign_id == 'Naii':  # Point gesture
+        #             point_history.append(landmark_list[8])
+        #         else:
+        #             point_history.append([0, 0])
+
+        #         # Finger gesture classification
+        #         finger_gesture_id = 0
+        #         point_history_len = len(pre_processed_point_history_list)
+        #         if point_history_len == (history_length * 2):
+        #             finger_gesture_id = point_history_classifier(
+        #                 pre_processed_point_history_list)
+
+        #         # Calculates the gesture IDs in the latest detection
+        #         finger_gesture_history.append(finger_gesture_id)
+        #         most_common_fg_id = Counter(
+        #             finger_gesture_history).most_common()
+
+        #         # Drawing part
+        #         debug_image = draw_bounding_rect(use_brect, debug_image, brect)
+        #         debug_image = draw_landmarks(debug_image, landmark_list)
+        #         debug_image = draw_info_text(
+        #             debug_image,
+        #             brect,
+        #             handedness,
+        #             keypoint_classifier_labels[hand_sign_id],
+        #             point_history_classifier_labels[most_common_fg_id[0][0]],
+        #         )
+        # else:
+        #     point_history.append([0, 0])
+
+        # debug_image = draw_point_history(debug_image, point_history)
+        # debug_image = draw_info(debug_image, fps, mode, number)
+
+        # Screen reflection #############################################################
+    #     cv.imshow('Hand Gesture Recognition', debug_image)
+
+    # cap.release()
+    # cv.destroyAllWindows()
+
 
 
 def select_mode(key, mode):
