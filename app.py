@@ -122,6 +122,19 @@ def main():
     # startInit = False
 
     app = Tk()
+    app.geometry("950x590")
+    
+    # Pause / Play gesture
+    pauseAndPlay = Frame(app, width=150, height=150)
+    pauseAndPlay.pack()
+    pauseAndPlay.place(anchor = 'center',relx=0.5,rely=0.6)
+    imgPausePlay = ImageTk.PhotoImage(Image.open("image.png"))
+    labelPausePlay = Label(pauseAndPlay, image = imgPausePlay)
+    labelPausePlay.pack()
+    ########################################################################
+    
+
+   
     app.bind('<Escape>', lambda e : app.quit())
 
 
@@ -129,7 +142,7 @@ def main():
     label_widget.pack()
     ns = SimpleNamespace()
 
-    def open_camera(instance):
+    def open_camera(prevTapped, startInit):
     # Capture the video frame by frame
         # global prevTapped, startInit
         _, frame = cap.read()
@@ -173,11 +186,11 @@ def main():
                 hand_sign_id = keypoint_classifier(pre_processed_landmark_list)
                 
                 
-                if not (ns.prevTapped == hand_sign_id) :
-                 if  (ns.startInit == False) :
-                        ns.startInit = time.time()
-                        ns.startInit = True
-                 elif (endInit - ns.startInit) > 0.3 :
+                if not (prevTapped == hand_sign_id) :
+                 if  (startInit == False) :
+                        startInit = time.time()
+                        startInit = True
+                 elif (endInit - startInit) > 0.1 :
                         if (hand_sign_id == 0):
                               pyautogui.press("space")
                         elif (hand_sign_id == 4):
@@ -189,8 +202,8 @@ def main():
                         elif (hand_sign_id == 7):
                               pyautogui.press("left")
 
-                        ns.prevTapped = hand_sign_id
-                        ns.startInit = False
+                        prevTapped = hand_sign_id
+                        startInit = False
 
                 if hand_sign_id == 'Naii':  # Point gesture
                     point_history.append(landmark_list[8])
@@ -240,18 +253,18 @@ def main():
 
   
     # Displaying photoimage in the label
-        label_widget.photo_image = photo_image
+        #label_widget.photo_image = photo_image
   
     # Configure image in the label
         label_widget.configure(image=photo_image)
   
     # Repeat the same process after every 10 seconds
-        label_widget.after(10, open_camera(instance))
+        label_widget.after(5, open_camera(prevTapped, startInit))
 
-    ns.prevTapped = -1
-    ns.startInit = False
+    prevTapped = -1
+    startInit = False
     
-    button1 = Button(app, text="Camm", command = lambda: open_camera(ns))
+    button1 = Button(app, text="Start Detection", command = lambda: open_camera(prevTapped, startInit))
     button1.pack()
 
 
