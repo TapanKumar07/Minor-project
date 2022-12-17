@@ -16,6 +16,8 @@ import numpy as np
 import mediapipe as mp
 from tkinter import * 
 from PIL import Image, ImageTk
+from types import SimpleNamespace
+
 
 fileName = os.environ['ALLUSERSPROFILE'] + "\WebcamCap.txt"
 cancel = False
@@ -116,8 +118,8 @@ def main():
 
     mode = 0
 
-    prevTapped = -1
-    startInit = False
+    # prevTapped = -1
+    # startInit = False
 
     app = Tk()
     app.bind('<Escape>', lambda e : app.quit())
@@ -125,13 +127,11 @@ def main():
 
     label_widget = Label(app)
     label_widget.pack()
+    ns = SimpleNamespace()
 
-    
-    prevTapped = -1
-    startInit = False
-    def open_camera():
-  
+    def open_camera(instance):
     # Capture the video frame by frame
+        # global prevTapped, startInit
         _, frame = cap.read()
         key = cv.waitKey(10)
         fps = cvFpsCalc.get()
@@ -147,11 +147,11 @@ def main():
 
         image.flags.writeable = False
         results = hands.process(image)
-        print(results.multi_hand_landmarks)
+      
         image.flags.writeable = True
        
         endInit = time.time()
-      
+       
         if results.multi_hand_landmarks is not None:
             for hand_landmarks, handedness in zip(results.multi_hand_landmarks,
                                                   results.multi_handedness):
@@ -172,12 +172,12 @@ def main():
                 # Hand sign classification
                 hand_sign_id = keypoint_classifier(pre_processed_landmark_list)
                 
-             
-                if not (prevTapped == hand_sign_id) :
-                 if  (startInit == False) :
-                        startInit = time.time()
-                        startInit = True
-                 elif (endInit - startInit) > 0.3 :
+                
+                if not (ns.prevTapped == hand_sign_id) :
+                 if  (ns.startInit == False) :
+                        ns.startInit = time.time()
+                        ns.startInit = True
+                 elif (endInit - ns.startInit) > 0.3 :
                         if (hand_sign_id == 0):
                               pyautogui.press("space")
                         elif (hand_sign_id == 4):
@@ -189,8 +189,8 @@ def main():
                         elif (hand_sign_id == 7):
                               pyautogui.press("left")
 
-                        prevTapped = hand_sign_id
-                        startInit = False
+                        ns.prevTapped = hand_sign_id
+                        ns.startInit = False
 
                 if hand_sign_id == 'Naii':  # Point gesture
                     point_history.append(landmark_list[8])
@@ -246,9 +246,12 @@ def main():
         label_widget.configure(image=photo_image)
   
     # Repeat the same process after every 10 seconds
-        label_widget.after(10, open_camera)
+        label_widget.after(10, open_camera(instance))
+
+    ns.prevTapped = -1
+    ns.startInit = False
     
-    button1 = Button(app, text="Camm", command=open_camera)
+    button1 = Button(app, text="Camm", command = lambda: open_camera(ns))
     button1.pack()
 
 
