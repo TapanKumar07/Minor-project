@@ -143,10 +143,11 @@ def main():
     ns = SimpleNamespace()
 
     def open_camera(prevTapped, startInit):
-    # Capture the video frame by frame
-        # global prevTapped, startInit
+     while True :
         _, frame = cap.read()
         key = cv.waitKey(10)
+        if key == 27:  # ESC
+           return
         fps = cvFpsCalc.get()
         mode = 0
       
@@ -241,25 +242,9 @@ def main():
         # Screen reflection #############################################################
         cv.imshow('Hand Gesture Recognition', debug_image)
 
-    # Convert image from one color space to other
-        opencv_image = cv.cvtColor(frame, cv.COLOR_BGR2RGBA)
-  
-    # Capture the latest frame and transform to image
-        captured_image = Image.fromarray(opencv_image)
-  
-    # Convert captured image to photoimage
-        photo_image = ImageTk.PhotoImage(image=captured_image)
-
-
-  
-    # Displaying photoimage in the label
-        #label_widget.photo_image = photo_image
-  
-    # Configure image in the label
-        label_widget.configure(image=photo_image)
-  
-    # Repeat the same process after every 10 seconds
-        label_widget.after(5, open_camera(prevTapped, startInit))
+   
+     cap.release()
+    cv.destroyAllWindows()
 
     prevTapped = -1
     startInit = False
